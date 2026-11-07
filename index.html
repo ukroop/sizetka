@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Боссик — Путь к воде</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#0f0f1a;
+  font-family:'Segoe UI',Roboto,sans-serif;
+  color:#fff;
+  overflow:hidden;
+}
+.game{
+  position:relative;
+  width:100vw;
+  height:100vh;
+  max-width:950px;
+  background:radial-gradient(circle at 50% 30%,#1a1a2e 0%,#0a0a14 100%);
+  border-radius:12px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 0 60px rgba(0,0,0,.8);
+}
+.scene{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  padding:30px 20px;
+  text-align:center;
+  position:relative;
+  overflow-y:auto;
+}
+.scene-title{
+  font-size:2rem;
+  font-weight:300;
+  letter-spacing:4px;
+  color:#ffb86b;
+  margin-bottom:15px;
+  text-shadow:0 0 25px rgba(255,184,107,.4);
+}
+.scene-text{
+  font-size:1.15rem;
+  line-height:1.7;
+  color:#ccc;
+  max-width:650px;
+  margin-bottom:25px;
+}
+.scene-text em{color:#ffb86b;font-style:normal}
+.scene-text .quote{
+  display:block;
+  margin:15px 0;
+  font-style:italic;
+  color:#ffb86b;
+  font-size:1.2rem;
+}
+.buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  justify-content:center;
+  margin-top:5px;
+}
+.btn{
+  padding:13px 30px;
+  font-size:.95rem;
+  letter-spacing:1.5px;
+  color:#fff;
+  background:transparent;
+  border:1px solid #ffb86b;
+  border-radius:40px;
+  cursor:pointer;
+  transition:all .3s;
+  text-transform:uppercase;
+  font-weight:600;
+}
+.btn:hover{
+  background:#ffb86b;
+  color:#0a0a0f;
+  box-shadow:0 0 30px rgba(255,184,107,.6);
+  transform:scale(1.05);
+}
+.btn.secondary{border-color:#666;color:#aaa}
+.btn.secondary:hover{background:#666;color:#fff;box-shadow:0 0 20px rgba(255,255,255,.2)}
+.name-input{
+  padding:14px 25px;
+  font-size:1.1rem;
+  border-radius:40px;
+  border:1px solid #ffb86b;
+  background:transparent;
+  color:#fff;
+  text-align:center;
+  outline:none;
+  width:280px;
+  margin-bottom:20px;
+  letter-spacing:2px;
+}
+.name-input::placeholder{color:#666}
+.timeskip{
+  font-size:1.8rem;
+  font-weight:300;
+  letter-spacing:8px;
+  color:#00d4ff;
+  text-shadow:0 0 30px rgba(0,212,255,.5);
+  margin-bottom:15px;
+}
+.ending-card{
+  background:rgba(20,20,35,.85);
+  border:1px solid #333;
+  border-radius:12px;
+  padding:25px 30px;
+  max-width:600px;
+  margin-bottom:15px;
+}
+.ending-title{font-size:1.6rem;font-weight:700;margin-bottom:12px}
+.ending-title.good{color:#6bffa3}
+.ending-title.bad{color:#ff6b6b}
+.ending-title.neutral{color:#ffb86b}
+.ending-title.secret{color:#d4a0ff}
+.ending-text{font-size:1rem;line-height:1.7;color:#bbb}
+.progress{
+  position:absolute;
+  bottom:12px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:.7rem;
+  color:#444;
+  letter-spacing:2px;
+}
+.stat{
+  position:absolute;
+  top:12px;
+  right:15px;
+  font-size:.7rem;
+  color:#555;
+  letter-spacing:1px;
+}
+.restart-btn{margin-top:15px}
+</style>
+</head>
+<body>
+<div class="game" id="game"></div>
+
+<script>
+(function() {
+  const game = document.getElementById('game');
+  let playerName = 'Боссик';
+  let chapter = 1;
+  let flags = {};
+
+  function renderScene(title, text, buttons, extraHtml) {
+    game.innerHTML = '';
+    const scene = document.createElement('div');
+    scene.className = 'scene';
+
+    const stat = document.createElement('div');
+    stat.className = 'stat';
+    stat.textContent = 'ГЛАВА ' + chapter;
+    scene.appendChild(stat);
+
+    if (title) {
+      const t = document.createElement('div');
+      t.className = 'scene-title';
+      t.textContent = title;
+      scene.appendChild(t);
+    }
+    if (text) {
+      const p = document.createElement('div');
+      p.className = 'scene-text';
+      p.innerHTML = text;
+      scene.appendChild(p);
+    }
+    if (extraHtml) {
+      const extra = document.createElement('div');
+      extra.innerHTML = extraHtml;
+      scene.appendChild(extra);
+    }
+    if (buttons && buttons.length) {
+      const btnWrap = document.createElement('div');
+      btnWrap.className = 'buttons';
+      buttons.forEach(b => {
+        const btn = document.createElement('button');
+        btn.className = 'btn ' + (b.secondary ? 'secondary' : '');
+        btn.textContent = b.label;
+        btn.onclick = b.onClick;
+        btnWrap.appendChild(btn);
+      });
+      scene.appendChild(btnWrap);
+    }
+    const prog = document.createElement('div');
+    prog.className = 'progress';
+    prog.textContent = 'ИСТОРИЯ';
+    scene.appendChild(prog);
+
+    game.appendChild(scene);
+  }
+
+  function next(fn) { chapter++; fn(); }
+
+  // === ВЫБОР ИМЕНИ ===
+  function sceneName() {
+    chapter = 1;
+    flags = {};
+    renderScene(
+      'ВЫБЕРИ ИМЯ',
+      'Как тебя зовут?',
+      null,
+      `<input class="name-input" id="nameInput" maxlength="15" placeholder="Введи имя..." autofocus>
+       <div style="margin-top:10px">
+         <button class="btn" id="confirmName">Подтвердить</button>
+       </div>`
+    );
+    const input = document.getElementById('nameInput');
+    const btn = document.getElementById('confirmName');
+    const confirm = () => {
+      const val = input.value.trim();
+      if (!val) { input.style.borderColor = '#ff4444'; input.placeholder = 'Напиши имя!'; return; }
+      playerName = val;
+      next(sceneTimeskip);
+    };
+    btn.onclick = confirm;
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') confirm(); });
+  }
+
+  // === ПРОШЛО 10 ЛЕТ ===
+  function sceneTimeskip() {
+    renderScene(
+      null,
+      null,
+      null,
+      `<div class="timeskip">ПРОШЛО 10 ЛЕТ</div>
+       <div class="scene-text">
+         ${playerName}, тебе уже 10. Ты живёшь с папой в маленьком городе у озера.
+         Однажды вечером папа заходит в комнату и говорит:
+       </div>
+       <div style="font-size:1.3rem;color:#ffb86b;margin:20px 0;font-style:italic">
+         «${playerName}, хочешь научиться плавать?»
+       </div>`
+    );
+    const scene = game.querySelector('.scene');
+    const btnWrap = document.createElement('div');
+    btnWrap.className = 'buttons';
+    const yes = document.createElement('button');
+    yes.className = 'btn';
+    yes.textContent = 'Да, пап!';
+    yes.onclick = () => next(sceneSwimYes);
+    const no = document.createElement('button');
+    no.className = 'btn secondary';
+    no.textContent = 'Нет, я боюсь воды';
+    no.onclick = () => next(sceneSwimNo);
+    btnWrap.appendChild(yes);
+    btnWrap.appendChild(no);
+    scene.appendChild(btnWrap);
+  }
+
+  // === ДА → ПРОИГРЫШ ===
+  function sceneSwimYes() {
+    renderScene(
+      'ПОПЫТКА ПЛЫТЬ',
+      'Ты соглашаешься. Папа ведёт тебя на озеро. Ты заходишь в воду, но...',
+      [{ label: 'Продолжить', onClick: () => next(sceneSwimFail) }]
+    );
+  }
+  function sceneSwimFail() {
+    renderScene(
+      'КОНЦОВКА: ПУЗАТЫЙ ПЛОВЕЦ',
+      null,
+      [{ label: 'Начать заново', onClick: () => { chapter = 1; sceneName(); } }],
+      `<div class="ending-card">
+         <div class="ending-title bad">💀 ПРОИГРЫШ</div>
+         <div class="ending-text">
+           Ты слишком пузатый, чтобы плавать. Вода не держит тебя,
+           и папа еле вытаскивает тебя на берег. Ты кашляешь и плачешь.
+           <br><br>
+           <em>Мораль: перед плаванием — тренировка и дисциплина.</em>
+         </div>
+       </div>`
+    );
+  }
+
+  // === НЕТ → ОСНОВНАЯ ВЕТКА ===
+  function sceneSwimNo() {
+    renderScene(
+      'ОТКАЗ',
+      `Папа вздыхает: «Ладно, ${playerName}. Тогда просто посидим у воды».
+       Вы идёте на берег. Там ты встречаешь...`,
+      [
+        { label: 'Странного старика', onClick: () => next(sceneOldMan) },
+        { label: 'Сверстника с мячом', onClick: () => next(sceneKid) },
+        { label: 'Девочку у воды', onClick: () => next(sceneGirl) },
+        { label: 'Никого не встречаешь', onClick: () => next(sceneAlone) }
+      ]
+    );
+  }
+
+  // === СТАРИК ===
+  function sceneOldMan() {
+    renderScene(
+      'СТАРИК У ОЗЕРА',
+      `Старик смотрит на тебя и говорит:
+       <span class="quote">«Плавать не обязательно. Главное — не бояться глубины внутри себя».</span>
+       Он протягивает тебе старую монету.`,
+      [
+        { label: 'Взять монету', onClick: () => { flags.coin = true; next(sceneOldManTake); } },
+        { label: 'Отказаться', onClick: () => next(sceneOldManRefuse) },
+        { label: 'Спросить, кто он', onClick: () => next(sceneOldManWho) }
+      ]
+    );
+  }
+  function sceneOldManWho() {
+    renderScene(
+      'КТО ТЫ?',
+      `Старик улыбается: <span class="quote">«Я — тот, кто когда-то тоже боялся воды».</span>
+       Он снова протягивает монету.`,
+      [
+        { label: 'Взять монету', onClick: () => { flags.coin = true; next(sceneOldManTake); } },
+        { label: 'Отказаться', onClick: () => next(sceneOldManRefuse) }
+      ]
+    );
+  }
+  function sceneOldManTake() {
+    renderScene(
+      'КОНЦОВКА: ТАЛИСМАН',
+      null,
+      [{ label: 'Начать заново', onClick: () => { chapter = 1; sceneName(); } }],
+      `<div class="ending-card">
+         <div class="ending-title good">✨ ХОРОШАЯ КОНЦОВКА</div>
+         <div class="ending-text">
+           Ты берёшь монету. Старик улыбается и исчезает.
+           <br><br>
+           С тех пор ты носишь монету как талисман. Ты так и не научился плавать,
+           но научился не бояться. И это важнее.
+         </div>
+       </div>`
+    );
+  }
+  function sceneOldManRefuse() {
+    renderScene(
+      'КОНЦОВКА: УПРЯМСТВО',
+      null,
+      [{ label: 'Начать заново', onClick: () => { chapter = 1; sceneName(); } }],
+      `<div class="ending-card">
+         <div class="ending-title neutral">😐 НЕЙТРАЛЬНАЯ КОНЦОВКА</div>
+         <div class="ending-text">
+           Ты отказываешься. Старик пожимает плечами и уходит.
+           <br><br>
+           Папа говорит: «Иногда отказ — тоже выбор».
+           Ты остаёшься сидеть у озера. И это нормально.
+         </div>
+       </div>`
+    );
+  }
+
+  // === МАЛЬЧИК ===
+  function sceneKid() {
+    renderScene(
+      'МЯЧ',
+      `Мальчик подбегает и говорит: «Давай в футбол!»
+       Папа кивает. Ты играешь весь вечер.`,
+      [{ label: 'Продолжить', onClick: () => next(sceneKidEnd) }]
+    );
+  }
+  function sceneKidEnd() {
+    renderScene(
+      'КОНЦОВКА: ДРУГ',
+      null,
+      [{ label: 'Начать заново', onClick: () => { chapter = 1; sceneName(); } }],
+      `<div class="ending-card">
+         <div class="ending-title good">⚽ ЛУЧШАЯ КОНЦОВКА</div>
+         <div class="ending-text">
+           Ты играешь в футбол. Мальчика зовут Артём (не тот, другой).
+           <br><br>
+           С этого дня вы друзья. А плавать ты научишься позже —
+           когда будешь готов.
+         </div>
+       </div>`
+    );
+  }
+
+  // === ДЕВОЧКА ===
+  function sceneGirl() {
+    renderScene(
+      'ДЕВОЧКА У ВОДЫ',
+      `Девочка сидит на камне и смотрит на воду. Её зовут Вероника.
+       Она говорит: «Я тоже боюсь воды. Но хочу научиться».`,
+      [
+        { label: 'Предложить учиться вместе', onClick: () => next(sceneGirlTogether) },
+        { label: 'Уйти', onClick: () => next(sceneGirlLeave) },
+        { label: 'Спросить, почему она боится', onClick: () => next(sceneGirlWhy) }
+      ]
+    );
+  }
+  function sceneGirlWhy() {
+    renderScene(
+      'ПОЧЕМУ?',
+      `Вероника вздыхает: «Однажды я чуть не утонула. С тех пор боюсь».
+       Ты молчишь. А потом говоришь: «Я тоже боюсь. Давай бояться вместе».`,
+      [
+        { label: 'Продолжить', onClick: () => next(sceneGirlTogether) },
+        { label: 'Уйти', onClick: () => next(sceneGirlLeave) }
+      ]
+    );
+  }
+  function sceneGirlTogether() {
+    renderScene(
+      'ВМЕСТЕ',
+      `Вы решаете учиться плавать вместе. Каждый день после школы
+       вы приходите на озеро и просто смотрите на воду.`,
+      [{ label: 'Продолжить', onClick: () => next(sceneGirlTogether2) }]
+    );
+  }
+  function sceneGirlTogether2() {
+    renderScene(
+      'ПЕРВЫЙ ШАГ',
+      `Через месяц вы решаетесь зайти в воду. Папа стоит рядом.
+       Вы держитесь за руки. Вода прохладная, но вы не боитесь.`,
+      [{ label: 'Продолжить', onClick: () => next(sceneGirlTogether3) }]
+    );
+  }
+  function sceneGirlTogether3() {
+    renderScene(
+      'КОНЦОВКА: ВМЕСТЕ С ВЕРОНИКОЙ',
+      null,
+      [{ label: 'Начать заново', onClick: () => { chapter = 1; sceneName(); } }],
+      `<div class="ending-card">
+         <div class="ending-title good">💙 ЛУЧШАЯ КОНЦОВКА: ВМЕСТЕ</div>
+         <div class="ending-text">
+           Вы учитесь плавать вместе. Проходит год.
+           Ты и Вероника — лучшие друзья. А может, и больше.
+           <br><br>
+           Ты научился плавать. И не бояться.
+         </div>
+       </div>`
+    );
+  }
+  function sceneGirlLeave() {
+    renderScene(
+      'КОНЦОВКА: ОДИНОЧЕСТВО',
+      null,
+      [{ label: 'Начать заново', onClick: () => { chapter = 1; sceneName(); } }],
+      `<div class="ending-card">
+         <div class="ending-title neutral">😐 НЕЙТРАЛЬНАЯ КОНЦОВКА</div>
+         <div class="ending-text">
+           Ты уходишь. Вероника остаётся сидеть на камне.
+           <br><br>
+           Ты так и не научился плавать. И не познакомился с ней.
+           Но у тебя ещё будет шанс.
+         </div>
+       </div>`
+    );
+  }
+
+  // === ОДИН ===
+  function sceneAlone() {
+    renderScene(
+      'ОДИН',
+      `Ты сидишь у воды один. Папа ушёл за мороженым.
+       Ты смотришь на воду и думаешь: «А что, если...»`,
+      [
+        { label: 'Зайти в воду', onClick: () => next(sceneAloneWater) },
+        { label: 'Уйти домой', onClick: () => next(sceneAloneHome) }
+      ]
+    );
+  }
+  function sceneAloneWater() {
+    renderScene(
+      'ВОДА',
+      `Ты заходишь в воду по колено. Она холодная. Но ты стоишь.
+       И вдруг понимаешь: ты не боишься.`,
+      [{ label: 'Продолжить', onClick: () => next(sceneAloneWater2) }]
+    );
+  }
+  function sceneAloneWater2() {
+    renderScene(
+      'КОНЦОВКА: ПЕРВЫЙ ШАГ',
+      null,
+      [{ label: 'Начать заново', onClick: () => { chapter = 1; sceneName(); } }],
+      `<div class="ending-card">
+         <div class="ending-title good">🌊 ХОРОШАЯ КОНЦОВКА</div>
+         <div class="ending-text">
+           Ты стоишь в воде. Папа возвращается и улыбается.
+           <br><br>
+           Ты сделал первый шаг. Не к плаванию — к смелости.
+         </div>
+       </div>`
+    );
+  }
+  function sceneAloneHome() {
+    renderScene(
+      'КОНЦОВКА: ДОМ',
+      null,
+      [{ label: 'Начать заново', onClick: () => { chapter = 1; sceneName(); } }],
+      `<div class="ending-card">
+         <div class="ending-title neutral">🏠 НЕЙТРАЛЬНАЯ КОНЦОВКА</div>
+         <div class="ending-text">
+           Ты уходишь домой. Вода остаётся позади.
+           <br><br>
+           Может быть, в другой раз.
+         </div>
+       </div>`
+    );
+  }
+
+  // === СТАРТ ===
+  sceneName();
+})();
+</script>
+</body>
+</html>
